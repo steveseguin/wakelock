@@ -16,6 +16,10 @@ dependencies:
   meta: ^1.2.0
   wakelock_macos: ^0.4.0
   wakelock_windows: ^0.2.0
+    git:
+      url: https://github.com/steveseguin/wakelock
+      ref: main
+      path: wakelock_windows
   wakelock_platform_interface: ^0.3.0
   wakelock_web: ^0.4.0
 
