@@ -21,7 +21,6 @@ dependencies:
       ref: main
       path: wakelock_windows
   wakelock_platform_interface: ^0.3.0
-  wakelock_web: ^0.4.0
 
 dev_dependencies:
   flutter_test:
