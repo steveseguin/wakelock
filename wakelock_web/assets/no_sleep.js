@@ -48,6 +48,7 @@ var nativeWakeLock = 'wakeLock' in navigator
 var NoSleep = (function () {
   var _releasedNative = true
   var _nativeRequestInProgress = false
+  var _nativeWakeLockRequested = false
 
   function NoSleep() {
     var _this = this
@@ -58,7 +59,7 @@ var NoSleep = (function () {
       this._wakeLock = null
       var handleVisibilityChange = function handleVisibilityChange() {
         if (
-          _this._wakeLock !== null &&
+          _nativeWakeLockRequested &&
           document.visibilityState === 'visible'
         ) {
           _this.enable()
@@ -110,17 +111,35 @@ var NoSleep = (function () {
         var _this2 = this
 
         if (nativeWakeLock) {
+          _nativeWakeLockRequested = true
+          // Do not treat an already released sentinel as an active lock.
+          if (this._wakeLock !== null && this._wakeLock.released === true) {
+            _releasedNative = true
+            this._wakeLock = null
+          }
+          if (_nativeRequestInProgress || this._wakeLock !== null) {
+            return
+          }
+
           _nativeRequestInProgress = true
           navigator.wakeLock
             .request('screen')
             .then(function (wakeLock) {
-              _releasedNative = false
               _nativeRequestInProgress = false
+              if (!_nativeWakeLockRequested) {
+                // A disable can arrive before the request resolves.
+                return wakeLock.release().catch(function (err) {
+                  console.error(err.name + ', ' + err.message)
+                })
+              }
 
+              _releasedNative = false
               _this2._wakeLock = wakeLock
               _this2._wakeLock.addEventListener('release', function () {
-                _releasedNative = true
-                _this2._wakeLock = null
+                if (_this2._wakeLock === wakeLock) {
+                  _releasedNative = true
+                  _this2._wakeLock = null
+                }
               })
             })
             .catch(function (err) {
@@ -147,12 +166,13 @@ var NoSleep = (function () {
       key: 'disable',
       value: function disable() {
         if (nativeWakeLock) {
-          if (this._wakeLock != null) {
-            _releasedNative = true
-            this._wakeLock.release()
-          }
-
+          _nativeWakeLockRequested = false
+          _releasedNative = true
+          var wakeLock = this._wakeLock
           this._wakeLock = null
+          if (wakeLock != null) {
+            wakeLock.release()
+          }
         } else if (oldIOS) {
           if (this.noSleepTimer) {
             console.warn(
